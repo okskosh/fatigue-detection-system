@@ -1,5 +1,5 @@
 import tkinter as tki
-from detection import process, with_alert
+from detection import drive_process, test_process
 
 
 def app_view():
@@ -13,11 +13,11 @@ def app_view():
     exit_btn.pack(side="bottom", fill="both", expand="yes", padx=10, pady=10)
 
     # button, that when pressed, runs the app in drive mode (with sound alert)
-    drive_btn = tki.Button(root, text="Driving mode", bg="#BDD9BF", command=with_alert)
+    drive_btn = tki.Button(root, text="Driving mode", bg="#BDD9BF", command=drive_process)
     drive_btn.pack(side="bottom", fill="both", expand="yes", padx=10, pady=10)
 
     # button, that when pressed, runs the app in test mode (no sound alert)
-    test_btn = tki.Button(root, text="Testing mode", bg="#BDD9BF", command=process)
+    test_btn = tki.Button(root, text="Testing mode", bg="#BDD9BF", command=test_process)
     test_btn.pack(side="bottom", fill="both", expand="yes", padx=10, pady=10)
 
     # create label on window
