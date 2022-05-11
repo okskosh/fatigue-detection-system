@@ -1,5 +1,6 @@
 from scipy.spatial import distance
 from imutils import face_utils 
+from fuzzy_logic import FatigueSys
 import dlib
 import cv2
 import matplotlib.pyplot as plt
@@ -50,6 +51,9 @@ def process(alert):
     hog_face_detector = dlib.get_frontal_face_detector()
     dlib_facelandmark = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
+    fatigue_sys = FatigueSys()
+    driver_state = []
+
     while True:
         _, frame = cam.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -96,6 +100,8 @@ def process(alert):
             MAR = round(MAR, 6)
             mar_list.append(MAR)
 
+            driver_state.append(fatigue_sys.compute_inference(EAR, MAR))
+
             ## Check Eye Aspect Ratio for blink
             if EAR < EAR_THRESHOLD:
                 FRAME_COUNT += 1
@@ -121,9 +127,6 @@ def process(alert):
             cv2.destroyAllWindows()
             break
 
-    print(ear_list)
-    print(mar_list) 
-
     plt.figure()
     plt.plot(ear_list)
     # plt.subplots_adjust(bottom=0.30)
@@ -135,5 +138,10 @@ def process(alert):
     plt.plot(mar_list)
     plt.title("MAR calculation")
     plt.ylabel("MAR")
+
+    plt.figure()
+    plt.plot(driver_state)
+    plt.title("Driver State calculation")
+    plt.ylabel("Driver State")
 
     plt.show()
