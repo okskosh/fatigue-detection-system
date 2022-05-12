@@ -37,13 +37,9 @@ def process(alert):
     # Declare a constant which will work as the threshold for EAR value, below which it will be regared as a blink 
     EAR_THRESHOLD = 0.20
     # declare another costant to hold the consecutive number of frames to consider for a driver state (3 sec) (20?)
-    CONSECUTIVE_FRAMES = 180 
+    CONSECUTIVE_FRAMES = 120 
     # Another constant which will work as a threshold for MAR value
     MAR_THRESHOLD = 0.9
-
-    # Initialize two counters 
-    BLINK_COUNT = 0 
-    FRAME_COUNT = 0 
 
     # initialize camera
     cam = cv2.VideoCapture(0)
@@ -101,27 +97,27 @@ def process(alert):
             mar_list.append(MAR)
 
             driver_state.append(fatigue_sys.compute_inference(EAR, MAR))
+            interpreted_state = []
+            common_state = []
             if len(driver_state) > CONSECUTIVE_FRAMES:
                 for state in driver_state[-CONSECUTIVE_FRAMES:]:
-                    fatigue_sys.interpret_membership(state)
+                    interpreted_state.append(fatigue_sys.interpret_membership(state))
+
+                common_state = max(set(interpreted_state), key=interpreted_state.count)
 
             # check Eye Aspect Ratio for closing the eye
             if EAR < EAR_THRESHOLD:
-                FRAME_COUNT += 1
-
                 cv2.drawContours(frame, [leftEyeHull], -1, (0, 0, 255), 1)
                 cv2.drawContours(frame, [rightEyeHull], -1, (0, 0, 255), 1)
 
                 if FRAME_COUNT >= CONSECUTIVE_FRAMES: 
                     cv2.putText(frame, "Closed eyes ALERT!", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    
-            else:
-                FRAME_COUNT = 0
 
             # check Mouth Aspect Ratio for closing the mouth
             if MAR > MAR_THRESHOLD:
                 cv2.drawContours(frame, [mouth], -1, (0, 0, 255), 1) 
                 cv2.putText(frame, "Yawn ALERT!", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
 
         cv2.imshow("Fatigue Detection System", frame)
 
