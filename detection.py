@@ -35,9 +35,9 @@ def process(alert):
     mar_list=[]
 
     # Declare a constant which will work as the threshold for EAR value, below which it will be regared as a blink 
-    EAR_THRESHOLD = 0.26
-    # Declare another costant to hold the consecutive number of frames to consider for a blink (20?)
-    CONSECUTIVE_FRAMES = 13 
+    EAR_THRESHOLD = 0.20
+    # declare another costant to hold the consecutive number of frames to consider for a driver state (3 sec) (20?)
+    CONSECUTIVE_FRAMES = 180 
     # Another constant which will work as a threshold for MAR value
     MAR_THRESHOLD = 0.9
 
@@ -101,8 +101,11 @@ def process(alert):
             mar_list.append(MAR)
 
             driver_state.append(fatigue_sys.compute_inference(EAR, MAR))
+            if len(driver_state) > CONSECUTIVE_FRAMES:
+                for state in driver_state[-CONSECUTIVE_FRAMES:]:
+                    fatigue_sys.interpret_membership(state)
 
-            ## Check Eye Aspect Ratio for blink
+            # check Eye Aspect Ratio for closing the eye
             if EAR < EAR_THRESHOLD:
                 FRAME_COUNT += 1
 
@@ -115,6 +118,7 @@ def process(alert):
             else:
                 FRAME_COUNT = 0
 
+            # check Mouth Aspect Ratio for closing the mouth
             if MAR > MAR_THRESHOLD:
                 cv2.drawContours(frame, [mouth], -1, (0, 0, 255), 1) 
                 cv2.putText(frame, "Yawn ALERT!", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
