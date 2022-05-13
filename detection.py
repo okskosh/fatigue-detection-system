@@ -47,14 +47,14 @@ def process(alert):
     hog_face_detector = dlib.get_frontal_face_detector()
     dlib_facelandmark = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
+    # initialize fuzzy control system
     fatigue_sys = FatigueSys()
-    driver_state = []
+    # driver states computed from EAR and MAR by fuzzy logic system
+    calc_states = []
 
     while True:
         _, frame = cam.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-        cv2.putText(frame, "Press any key to exit", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
         # detect faces 
         faces = hog_face_detector(gray)
@@ -96,28 +96,51 @@ def process(alert):
             MAR = round(MAR, 6)
             mar_list.append(MAR)
 
-            driver_state.append(fatigue_sys.compute_inference(EAR, MAR))
-            interpreted_state = []
-            common_state = []
-            if len(driver_state) > CONSECUTIVE_FRAMES:
-                for state in driver_state[-CONSECUTIVE_FRAMES:]:
-                    interpreted_state.append(fatigue_sys.interpret_membership(state))
+            cv2.rectangle(frame, (0, 430), (640, 480), (195, 217, 189), -1)
+            cv2.rectangle(frame, (0, 420), (120, 440), (82, 64, 46), -1)
+            cv2.putText(frame, "Messages", (5, 435), cv2.FONT_HERSHEY_PLAIN, 1.2, (255, 255, 255), 1)
+            cv2.putText(frame, "Press any key to exit", (5, 465), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
-                common_state = max(set(interpreted_state), key=interpreted_state.count)
+            # compute numerical driver state
+            calculated_state = fatigue_sys.compute_inference(EAR, MAR)
+            calc_states.append(calculated_state)
+            # interpreted numerical driver states ('fatigued', 'sluggish' or 'wakeful') 
+            interpreted_states = []
+
+            # get results only for some last frames
+            if len(calc_states) > CONSECUTIVE_FRAMES:
+                # interpret states for some last frames
+                for state in calc_states[-CONSECUTIVE_FRAMES:]:
+                    interpreted_state = fatigue_sys.interpret_membership(state)
+                    interpreted_states.append(interpreted_state)
+
+                # get the most common state for some last frames
+                common_state = max(set(interpreted_states), key=interpreted_states.count)
+
+
+                if common_state == 'fatigued':
+                    msg = "Danger. You may have an accident. Please stop car immediately"
+                    # alert and say 'Danger. You may have an accident. Please stop car immediately'
+                    if (alert):
+                        
+
+                if common_state == 'sluggish':
+                    msg = "There is loss of attention. Please have a rest"
+                    # say 'There is loss of attention. Please have a rest'
+                
+                cv2.rectangle(frame, (0, 430), (640, 480), (195, 217, 189), -1)
+                cv2.rectangle(frame, (0, 420), (120, 440), (82, 64, 46), -1)
+                cv2.putText(frame, "Messages", (5, 435), cv2.FONT_HERSHEY_PLAIN, 1.2, (255, 255, 255), 1)
+                cv2.putText(frame, msg, (5, 465), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
             # check Eye Aspect Ratio for closing the eye
             if EAR < EAR_THRESHOLD:
                 cv2.drawContours(frame, [leftEyeHull], -1, (0, 0, 255), 1)
                 cv2.drawContours(frame, [rightEyeHull], -1, (0, 0, 255), 1)
 
-                if FRAME_COUNT >= CONSECUTIVE_FRAMES: 
-                    cv2.putText(frame, "Closed eyes ALERT!", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-
             # check Mouth Aspect Ratio for closing the mouth
             if MAR > MAR_THRESHOLD:
                 cv2.drawContours(frame, [mouth], -1, (0, 0, 255), 1) 
-                cv2.putText(frame, "Yawn ALERT!", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-
 
         cv2.imshow("Fatigue Detection System", frame)
 
@@ -140,7 +163,7 @@ def process(alert):
     plt.ylabel("MAR")
 
     plt.figure()
-    plt.plot(driver_state)
+    plt.plot(calc_states)
     plt.title("Driver State calculation")
     plt.ylabel("Driver State")
 
