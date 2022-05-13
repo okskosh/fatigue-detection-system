@@ -1,5 +1,6 @@
 from scipy.spatial import distance
-from imutils import face_utils 
+from imutils import face_utils
+from playsound import playsound
 from fuzzy_logic import FatigueSys
 import dlib
 import cv2
@@ -33,13 +34,16 @@ def process(alert):
     # all eye and mouth aspect ratio
     ear_list=[]
     mar_list=[]
+    frames_count = 0
 
     # Declare a constant which will work as the threshold for EAR value, below which it will be regared as a blink 
     EAR_THRESHOLD = 0.20
-    # declare another costant to hold the consecutive number of frames to consider for a driver state (3 sec) (20?)
-    CONSECUTIVE_FRAMES = 120 
+    # declare another costant to hold the consecutive number of frames to consider for a driver state (6 sec) (20?)
+    CONSECUTIVE_FRAMES = 180 
     # Another constant which will work as a threshold for MAR value
     MAR_THRESHOLD = 0.9
+    # declare another costant to hold the consecutive number of frames for not alerting a driver (10 sec)
+    NON_ALERTING_FRAMES = 300 
 
     # initialize camera
     cam = cv2.VideoCapture(0)
@@ -107,6 +111,7 @@ def process(alert):
             # interpreted numerical driver states ('fatigued', 'sluggish' or 'wakeful') 
             interpreted_states = []
 
+            frames_count += 1
             # get results only for some last frames
             if len(calc_states) > CONSECUTIVE_FRAMES:
                 # interpret states for some last frames
@@ -117,16 +122,24 @@ def process(alert):
                 # get the most common state for some last frames
                 common_state = max(set(interpreted_states), key=interpreted_states.count)
 
-
                 if common_state == 'fatigued':
-                    msg = "Danger. You may have an accident. Please stop car immediately"
-                    # alert and say 'Danger. You may have an accident. Please stop car immediately'
-                    if (alert):
-                        
+                    msg = "You may face an accident. Please stop car immediately"
+                    # alert and say 'You may face an accident. Please stop car immediately'
+                    if alert and frames_count > NON_ALERTING_FRAMES:
+                        playsound(r'sounds\\alert.mp3')
+                        playsound(r'sounds\\accident.mp3')
+                        frames_count = 0
+                else:
+                    msg = "Press any key to exit"
 
                 if common_state == 'sluggish':
                     msg = "There is loss of attention. Please have a rest"
                     # say 'There is loss of attention. Please have a rest'
+                    if alert and frames_count > NON_ALERTING_FRAMES:
+                        playsound(r'sounds\\rest.mp3')
+                        frames_count = 0
+                else:
+                    msg = "Press any key to exit"
                 
                 cv2.rectangle(frame, (0, 430), (640, 480), (195, 217, 189), -1)
                 cv2.rectangle(frame, (0, 420), (120, 440), (82, 64, 46), -1)
@@ -152,10 +165,8 @@ def process(alert):
 
     plt.figure()
     plt.plot(ear_list)
-    # plt.subplots_adjust(bottom=0.30)
     plt.title("EAR calculation")
     plt.ylabel('EAR')
-    #plt.gca().axes.get_xaxis().set_visible(False)
 
     plt.figure()
     plt.plot(mar_list)
